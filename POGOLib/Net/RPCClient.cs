@@ -147,7 +147,7 @@ namespace POGOLib.Net
             return EncounterResponse.Parser.ParseFrom(response);
         }
 
-        public CatchPokemonResponse CatchPokemon(MapPokemon poke, EncounterResponse encounter)
+        public CatchPokemonResponse CatchPokemon(MapPokemon poke, EncounterResponse encounter, ItemId pokeball = ItemId.ItemPokeBall)
         {
             var response = SendRemoteProcedureCall(new Request
             {
@@ -155,7 +155,7 @@ namespace POGOLib.Net
                 RequestMessage = new CatchPokemonMessage
                 {
                     EncounterId = poke.EncounterId,
-                    Pokeball = (int)ItemId.ItemPokeBall,
+                    Pokeball = (int)pokeball,
                     NormalizedReticleSize = (new Random()).NextDouble()/2 + 1.25,
                     SpawnPointGuid = encounter.WildPokemon.SpawnPointId,
                     HitPokemon = true,
