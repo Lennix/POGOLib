@@ -12,12 +12,15 @@ using POGOLib.Pokemon;
 using POGOLib.Pokemon.Data;
 using POGOLib.Util;
 using POGOProtos.Map;
+using POGOProtos.Map.Pokemon;
 using POGOProtos.Networking.Envelopes;
 using POGOProtos.Networking.Requests;
 using POGOProtos.Networking.Requests.Messages;
 using POGOProtos.Networking.Responses;
 using static POGOProtos.Networking.Envelopes.RequestEnvelope.Types;
 using static POGOProtos.Networking.Envelopes.RequestEnvelope.Types.AuthInfo.Types;
+using POGOProtos.Inventory;
+using POGOProtos.Map.Fort;
 
 namespace POGOLib.Net
 {
@@ -126,6 +129,40 @@ namespace POGOLib.Net
             }
 
             return true;
+        }
+
+        public EncounterResponse Encounter(MapPokemon poke)
+        {
+            var response = SendRemoteProcedureCall(new Request
+            {
+                RequestType = RequestType.Encounter,
+                RequestMessage = new EncounterMessage
+                {
+                    EncounterId = poke.EncounterId,
+                    SpawnPointId = poke.SpawnPointId,
+                    PlayerLatitude = _session.Player.Latitude,
+                    PlayerLongitude = _session.Player.Longitude
+                }.ToByteString()
+            });
+            return EncounterResponse.Parser.ParseFrom(response);
+        }
+
+        public CatchPokemonResponse CatchPokemon(MapPokemon poke, EncounterResponse encounter)
+        {
+            var response = SendRemoteProcedureCall(new Request
+            {
+                RequestType = RequestType.CatchPokemon,
+                RequestMessage = new CatchPokemonMessage
+                {
+                    EncounterId = poke.EncounterId,
+                    Pokeball = (int)ItemId.ItemPokeBall,
+                    NormalizedReticleSize = (new Random()).NextDouble()/2 + 1.25,
+                    SpawnPointGuid = encounter.WildPokemon.SpawnPointId,
+                    HitPokemon = true,
+                    SpinModifier = (new Random()).NextDouble()
+                }.ToByteString()
+            });
+            return CatchPokemonResponse.Parser.ParseFrom(response);
         }
 
         /// <summary>
@@ -308,6 +345,38 @@ namespace POGOLib.Net
             {
                 RequestType = requestType
             });
+        }
+
+        public FortDetailsResponse FortDetails(FortData fort)
+        {
+            var fortDetailsBytes = SendRemoteProcedureCall(new Request
+            {
+                RequestType = RequestType.FortDetails,
+                RequestMessage = new FortDetailsMessage
+                {
+                    FortId = fort.Id,
+                    Latitude = fort.Latitude,
+                    Longitude = fort.Longitude
+                }.ToByteString()
+            });
+            return FortDetailsResponse.Parser.ParseFrom(fortDetailsBytes);
+        }
+
+        public FortSearchResponse FortSearch(FortData fort)
+        {
+            var fortDetailsBytes = SendRemoteProcedureCall(new Request
+            {
+                RequestType = RequestType.FortSearch,
+                RequestMessage = new FortSearchMessage
+                {
+                    FortId = fort.Id,
+                    FortLatitude = fort.Latitude,
+                    FortLongitude = fort.Longitude,
+                    PlayerLatitude = _session.Player.Latitude,
+                    PlayerLongitude = _session.Player.Longitude
+                }.ToByteString()
+            });
+            return FortSearchResponse.Parser.ParseFrom(fortDetailsBytes);
         }
 
         public ByteString SendRemoteProcedureCall(Request request)
