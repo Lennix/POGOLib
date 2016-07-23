@@ -2,6 +2,9 @@
 using System.Device.Location;
 using System.Linq;
 using POGOProtos.Data.Player;
+using System.IO;
+using Newtonsoft.Json;
+using static POGOLib.Pokemon.Inventory;
 
 namespace POGOLib.Pokemon
 {
@@ -13,7 +16,7 @@ namespace POGOLib.Pokemon
             Coordinate = coordinate;
 
             Inventory = new Inventory(this);
-            Inventory.Update += InventoryOnUpdate;
+            Inventory.ItemChanged += InventoryOnItemChanged;
         }
 
         /// <summary>
@@ -51,6 +54,10 @@ namespace POGOLib.Pokemon
         public void SetCoordinates(double latitude, double longitude, double altitude = 100)
         {
             Coordinate = new GeoCoordinate(latitude, longitude, altitude);
+
+            var fileName = Path.Combine(Environment.CurrentDirectory, "cache", $"location.json");
+
+            File.WriteAllText(fileName, JsonConvert.SerializeObject(Coordinate, Formatting.Indented));
         }
         
         /// <summary>
@@ -64,11 +71,12 @@ namespace POGOLib.Pokemon
             return Coordinate.GetDistanceTo(new GeoCoordinate(latitude, longitude));
         }
 
-        private void InventoryOnUpdate(object sender, EventArgs eventArgs)
+        private void InventoryOnItemChanged(object sender, InventoryItemChangedEventArgs eventArgs)
         {
-            Stats = Inventory.InventoryItems
-                .Single(x => x.InventoryItemData.PlayerStats != null)
-                .InventoryItemData.PlayerStats;
+            if (eventArgs.type == InventoryItemType.PlayerStats)
+            {
+                Stats = eventArgs.delta.InventoryItemData.PlayerStats;
+            }
         }
 
     }
