@@ -33,7 +33,7 @@ namespace POGOLib.Pokemon
         internal long LastInventoryTimestampMs;
 
         /// <summary>
-        /// Gets the last received <see cref="RepeatedField{InventoryItem}"/> from PokémonGo.<br/>
+        /// Contains the last received <see cref="RepeatedField{InventoryItem}"/> from PokémonGo.<br/>
         /// Only use this if you know what you are doing.
         /// </summary>
         public RepeatedField<InventoryItem> InventoryItems
@@ -45,7 +45,7 @@ namespace POGOLib.Pokemon
         }
 
         /// <summary>
-        /// Gets the last received <see cref="RepeatedField{InventoryItem}"/> from PokémonGo.<br/>
+        /// Contains all items <see cref="RepeatedField{InventoryItem}"/> from PokémonGo.<br/>
         /// Only use this if you know what you are doing.
         /// </summary>
         public RepeatedField<InventoryItem> InventoryDelta
@@ -109,12 +109,14 @@ namespace POGOLib.Pokemon
                 else
                     continue; // Not Yet Implemented
 
+                ItemChanged?.Invoke(this, new InventoryItemChangedEventArgs(item, deltaItem, type));
+
                 if (item == null)
                     InventoryItems.Add(deltaItem);
                 else
-                    item = deltaItem;
-
-                ItemChanged?.Invoke(this, new InventoryItemChangedEventArgs(item, deltaItem, type));
+                {
+                    item.InventoryItemData = deltaItem.InventoryItemData;
+                }
             }
 
             Update?.Invoke(this, EventArgs.Empty);
