@@ -78,11 +78,7 @@ namespace POGOLib.Net
                 GetPlayerResponse playerResponse = null;
                 do
                 {
-                    response = SendRemoteProcedureCall(new Request
-                    {
-                        RequestType = RequestType.GetPlayer
-                    });
-                    playerResponse = GetPlayerResponse.Parser.ParseFrom(response);
+                    playerResponse = GetPlayer();
                     if (!playerResponse.Success)
                         Thread.Sleep(1000);
                 }
@@ -116,6 +112,15 @@ namespace POGOLib.Net
             }
 
             return true;
+        }
+
+        public GetPlayerResponse GetPlayer()
+        {
+            var response = SendRemoteProcedureCall(new Request
+            {
+                RequestType = RequestType.GetPlayer
+            });
+            return GetPlayerResponse.Parser.ParseFrom(response);
         }
 
         /// <summary>
