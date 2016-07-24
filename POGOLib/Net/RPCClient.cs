@@ -437,7 +437,7 @@ namespace POGOLib.Net
 
                                 if (inventory.InventoryDelta != null &&
                                     inventory.InventoryDelta.InventoryItems.Count != 0)
-                                    _session.Player.Inventory.InventoryItems = inventory.InventoryDelta.InventoryItems;
+                                    _session.Player.Inventory.InventoryDelta = inventory.InventoryDelta.InventoryItems;
                             }
                         }
                         break;
