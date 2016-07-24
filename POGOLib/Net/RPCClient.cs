@@ -66,6 +66,10 @@ namespace POGOLib.Net
 
         internal GeoCoordinate LastGeoCoordinateMapObjectsRequest { get; private set; } = new GeoCoordinate();
 
+        public DownloadItemTemplatesResponse ItemTemplates { get; private set; }
+
+        public GetAssetDigestResponse AssetDigest { get; private set; }
+
         /// <summary>
         /// Sends all requests which the (android-)client sends on startup
         /// </summary>
@@ -73,7 +77,7 @@ namespace POGOLib.Net
         {
             try
             {
-                ByteString response;
+                ByteString bytes;
                 // Send GetPlayer to check if we're connected and authenticated
                 GetPlayerResponse playerResponse = null;
                 do
@@ -85,7 +89,7 @@ namespace POGOLib.Net
                 while (!playerResponse.Success);
 
                 // Get DownloadRemoteConfig
-                response = SendRemoteProcedureCall(new Request
+                bytes = SendRemoteProcedureCall(new Request
                 {
                     RequestType = RequestType.DownloadRemoteConfigVersion,
                     RequestMessage = new DownloadRemoteConfigVersionMessage
@@ -94,24 +98,97 @@ namespace POGOLib.Net
                         AppVersion = 2903
                     }.ToByteString()
                 });
+                var response = DownloadRemoteConfigVersionResponse.Parser.ParseFrom(bytes);
 
-                // GetAssetDigest
-                response = SendRemoteProcedureCall(new Request
+                // Currently there seems to be a bug since AssetDigest timestamp is 1467338276561000 which is way in the future
+                // That's why the client (it seems) is pulling AssetDigest every time and itemTemplates only after fresh install
+                AssetDigest = LoadAssetDigest();
+                if (AssetDigest == null || response.AssetDigestTimestampMs > (ulong)TimeUtil.GetCurrentTimestampInMilliseconds())
                 {
-                    RequestType = RequestType.GetAssetDigest,
-                    RequestMessage = new GetAssetDigestMessage
+                    // GetAssetDigest
+                    bytes = SendRemoteProcedureCall(new Request
                     {
-                        Platform = POGOProtos.Enums.Platform.Android,
-                        AppVersion = 2903
-                    }.ToByteString()
-                });
+                        RequestType = RequestType.GetAssetDigest,
+                        RequestMessage = new GetAssetDigestMessage
+                        {
+                            Platform = POGOProtos.Enums.Platform.Android,
+                            AppVersion = 2903
+                        }.ToByteString()
+                    });
+                    AssetDigest = GetAssetDigestResponse.Parser.ParseFrom(bytes);
+                    if (AssetDigest != null)
+                    {
+                        SaveAssetDigest(AssetDigest);
+                    }
+                }
+
+                ItemTemplates = LoadItemTemplates();
+                if (ItemTemplates == null || response.ItemTemplatesTimestampMs > (ulong)TimeUtil.GetCurrentTimestampInMilliseconds())
+                {
+                    // DownloadItemTemplates
+                    bytes = SendRemoteProcedureCall(new Request
+                    {
+                        RequestType = RequestType.DownloadItemTemplates,
+                    });
+                    ItemTemplates = DownloadItemTemplatesResponse.Parser.ParseFrom(bytes);
+                    if (ItemTemplates.Success)
+                    {
+                        SaveItemTemplates(ItemTemplates);
+                    }
+                }
             }
-            catch (Exception)
+            catch (Exception exp)
             {
                 return false;
             }
 
             return true;
+        }
+
+        private void SaveItemTemplates(DownloadItemTemplatesResponse itemTemplates)
+        {
+            var fileName = Path.Combine(Environment.CurrentDirectory, "cache", "itemTemplates");
+
+            File.WriteAllText($"{fileName}.json", JsonConvert.SerializeObject(itemTemplates, Formatting.Indented));
+            File.WriteAllBytes($"{fileName}.dat", itemTemplates.ToByteString().ToByteArray());
+        }
+
+        internal DownloadItemTemplatesResponse LoadItemTemplates()
+        {
+            var cacheDir = Path.Combine(Environment.CurrentDirectory, "cache");
+            var fileName = Path.Combine(cacheDir, "itemTemplates.dat");
+
+            if (!Directory.Exists(cacheDir))
+                Directory.CreateDirectory(cacheDir);
+
+            if (File.Exists(fileName))
+            {
+                return DownloadItemTemplatesResponse.Parser.ParseFrom(File.ReadAllBytes(fileName));
+            }
+            return null;
+        }
+
+        private void SaveAssetDigest(GetAssetDigestResponse assetDigest)
+        {
+            var fileName = Path.Combine(Environment.CurrentDirectory, "cache", "assetDigest");
+
+            File.WriteAllText($"{fileName}.json", JsonConvert.SerializeObject(assetDigest, Formatting.Indented));
+            File.WriteAllBytes($"{fileName}.dat", assetDigest.ToByteString().ToByteArray());
+        }
+
+        internal GetAssetDigestResponse LoadAssetDigest()
+        {
+            var cacheDir = Path.Combine(Environment.CurrentDirectory, "cache");
+            var fileName = Path.Combine(cacheDir, "assetDigest.dat");
+
+            if (!Directory.Exists(cacheDir))
+                Directory.CreateDirectory(cacheDir);
+
+            if (File.Exists(fileName))
+            {
+                return GetAssetDigestResponse.Parser.ParseFrom(File.ReadAllBytes(fileName));
+            }
+            return null;
         }
 
         public GetPlayerResponse GetPlayer()
