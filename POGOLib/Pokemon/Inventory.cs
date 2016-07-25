@@ -65,6 +65,10 @@ namespace POGOLib.Pokemon
 
             foreach (var deltaItem in InventoryDelta)
             {
+                // Item was removed...
+                if (deltaItem.InventoryItemData == null)
+                    continue;
+
                 InventoryItem item = null;
                 InventoryItemType type = InventoryItemType.PlayerStats;
                 if (deltaItem.InventoryItemData.PlayerStats != null)
