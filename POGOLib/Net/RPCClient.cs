@@ -66,10 +66,6 @@ namespace POGOLib.Net
 
         internal GeoCoordinate LastGeoCoordinateMapObjectsRequest { get; private set; } = new GeoCoordinate();
 
-        public DownloadItemTemplatesResponse ItemTemplates { get; private set; }
-
-        public GetAssetDigestResponse AssetDigest { get; private set; }
-
         /// <summary>
         /// Sends all requests which the (android-)client sends on startup
         /// </summary>
@@ -102,7 +98,7 @@ namespace POGOLib.Net
 
                 // Currently there seems to be a bug since AssetDigest timestamp is 1467338276561000 which is way in the future
                 // That's why the client (it seems) is pulling AssetDigest every time and itemTemplates only after fresh install
-                AssetDigest = LoadAssetDigest();
+                var AssetDigest = LoadAssetDigest();
                 if (AssetDigest == null || response.AssetDigestTimestampMs > (ulong)TimeUtil.GetCurrentTimestampInMilliseconds())
                 {
                     // GetAssetDigest
@@ -121,8 +117,9 @@ namespace POGOLib.Net
                         SaveAssetDigest(AssetDigest);
                     }
                 }
+                Templates.AssetDigest = AssetDigest;
 
-                ItemTemplates = LoadItemTemplates();
+                var ItemTemplates = LoadItemTemplates();
                 if (ItemTemplates == null || response.ItemTemplatesTimestampMs > (ulong)TimeUtil.GetCurrentTimestampInMilliseconds())
                 {
                     // DownloadItemTemplates
@@ -136,6 +133,7 @@ namespace POGOLib.Net
                         SaveItemTemplates(ItemTemplates);
                     }
                 }
+                Templates.ItemTemplates = ItemTemplates;
             }
             catch (Exception exp)
             {
